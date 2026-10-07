@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>건강한 식품 두더지 잡기</title>
+    <!-- Tailwind CSS for modern responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter & Jua for friendly game feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .game-hole {
+            perspective: 1000px;
+        }
+        .mole-item {
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .bounce-in {
+            animation: bounceIn 0.3s forwards;
+        }
+        @keyframes bounceIn {
+            0% { transform: translateY(100%) scale(0.5); opacity: 0; }
+            70% { transform: translateY(-10%) scale(1.05); opacity: 1; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-4 md:p-6 text-gray-800">
+
+    <!-- 상단 HUD 영역 -->
+    <header class="w-full max-w-2xl bg-white/80 backdrop-blur-md rounded-2xl shadow-lg p-4 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-emerald-100">
+        <div class="flex items-center gap-2">
+            <span class="text-3xl">🥦</span>
+            <div>
+                <h1 class="text-xl font-bold text-emerald-700">건강한 식품 두더지 잡기</h1>
+                <p class="text-xs text-gray-500">가공식품은 잡고! 채소는 살려주세요!</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200">
+            <div class="text-center">
+                <div class="text-xs text-emerald-600 font-semibold">점수</div>
+                <div id="scoreDisplay" class="text-2xl font-bold text-emerald-700">0</div>
+            </div>
+            <div class="h-8 w-px bg-emerald-200"></div>
+            <div class="text-center">
+                <div class="text-xs text-amber-600 font-semibold">남은 시간</div>
+                <div id="timeDisplay" class="text-2xl font-bold text-amber-600">30초</div>
+            </div>
+            <div class="h-8 w-px bg-emerald-200"></div>
+            <div class="text-center">
+                <div class="text-xs text-rose-600 font-semibold">생명력</div>
+                <div id="livesDisplay" class="text-xl text-rose-500">❤️❤️❤️</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 게임 플레이 구역 -->
+    <main class="w-full max-w-2xl flex-1 flex flex-col items-center justify-center relative">
+        
+        <!-- 대기 화면 (오버레이) -->
+        <div id="startScreen" class="absolute inset-0 bg-white/95 backdrop-blur-md z-20 rounded-3xl flex flex-col items-center justify-center p-6 text-center shadow-2xl border border-emerald-100">
+            <div class="text-6xl mb-4 animate-bounce">🥕🍔</div>
+            <h2 class="text-3xl font-bold text-emerald-800 mb-2">건강한 식습관 대모험</h2>
+            <p class="text-gray-600 max-w-md mb-6 text-sm md:text-base leading-relaxed">
+                구멍에서 튀어나오는 식품을 구별하세요!<br>
+                <span class="text-rose-600 font-bold">🍔 패스트푸드·가공식품</span>은 터치해서 잡고 (+10점),<br>
+                <span class="text-emerald-600 font-bold">🥕 채소·과일</span>은 그대로 두세요! 실수로 치면 감점! (-10점)
+            </p>
+            <button onclick="startGame()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xl px-8 py-4 rounded-2xl shadow-lg transform transition hover:scale-105 active:scale-95 cursor-pointer">
+                게임 시작하기 🚀
+            </button>
+        </div>
+
+        <!-- 게임 오버 / 결과 화면 (오버레이) -->
+        <div id="gameOverScreen" class="absolute inset-0 bg-white/95 backdrop-blur-md z-20 rounded-3xl flex flex-col items-center justify-center p-6 text-center shadow-2xl border border-emerald-100 hidden">
+            <div id="gameOverEmoji" class="text-6xl mb-3">🏆</div>
+            <h2 id="gameOverTitle" class="text-3xl font-bold text-emerald-800 mb-1">게임 종료!</h2>
+            <p id="gameOverDesc" class="text-gray-600 mb-4 text-sm">참 잘했어요! 건강 박사님이 되셨군요.</p>
+            
+            <div class="bg-emerald-50 rounded-2xl p-4 w-full max-w-xs mb-6 border border-emerald-200">
+                <div class="text-sm text-gray-500">최종 획득 점수</div>
+                <div id="finalScore" class="text-4xl font-extrabold text-emerald-700 my-1">0점</div>
+            </div>
+
+            <button onclick="startGame()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-lg px-8 py-3 rounded-2xl shadow-lg transform transition hover:scale-105 active:scale-95 cursor-pointer">
+                다시 도전하기 🔄
+            </button>
+        </div>
+
+        <!-- 3x3 구멍 그리드 -->
+        <div class="grid grid-cols-3 gap-3 sm:gap-6 w-full max-w-md aspect-square bg-emerald-800/10 p-4 sm:p-6 rounded-3xl border-4 border-emerald-600/30 shadow-inner">
+            <!-- 구멍 0 ~ 8 -->
+            <div class="game-hole relative bg-amber-900/20 rounded-2xl overflow-hidden flex items-end justify-center border-b-4 border-amber-900/40 shadow-inner cursor-pointer" onclick="hitHole(0)">
+                <div class="absolute inset-x-2 bottom-0 h-4 bg-amber-900/30 rounded-full"></div>
+                <div id="mole-0" class="mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer"></div>
+            </div>
+            <div class="game-hole relative bg-amber-900/20 rounded-2xl overflow-hidden flex items-end justify-center border-b-4 border-amber-900/40 shadow-inner cursor-pointer" onclick="hitHole(1)">
+                <div class="absolute inset-x-2 bottom-0 h-4 bg-amber-900/30 rounded-full"></div>
+                <div id="mole-1" class="mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer"></div>
+            </div>
+            <div class="game-hole relative bg-amber-900/20 rounded-2xl overflow-hidden flex items-end justify-center border-b-4 border-amber-900/40 shadow-inner cursor-pointer" onclick="hitHole(2)">
+                <div class="absolute inset-x-2 bottom-0 h-4 bg-amber-900/30 rounded-full"></div>
+                <div id="mole-2" class="mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer"></div>
+            </div>
+            <div class="game-hole relative bg-amber-900/20 rounded-2xl overflow-hidden flex items-end justify-center border-b-4 border-amber-900/40 shadow-inner cursor-pointer" onclick="hitHole(3)">
+                <div class="absolute inset-x-2 bottom-0 h-4 bg-amber-900/30 rounded-full"></div>
+                <div id="mole-3" class="mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer"></div>
+            </div>
+            <div class="game-hole relative bg-amber-900/20 rounded-2xl overflow-hidden flex items-end justify-center border-b-4 border-amber-900/40 shadow-inner cursor-pointer" onclick="hitHole(4)">
+                <div class="absolute inset-x-2 bottom-0 h-4 bg-amber-900/30 rounded-full"></div>
+                <div id="mole-4" class="mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer"></div>
+            </div>
+            <div class="game-hole relative bg-amber-900/20 rounded-2xl overflow-hidden flex items-end justify-center border-b-4 border-amber-900/40 shadow-inner cursor-pointer" onclick="hitHole(5)">
+                <div class="absolute inset-x-2 bottom-0 h-4 bg-amber-900/30 rounded-full"></div>
+                <div id="mole-5" class="mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer"></div>
+            </div>
+            <div class="game-hole relative bg-amber-900/20 rounded-2xl overflow-hidden flex items-end justify-center border-b-4 border-amber-900/40 shadow-inner cursor-pointer" onclick="hitHole(6)">
+                <div class="absolute inset-x-2 bottom-0 h-4 bg-amber-900/30 rounded-full"></div>
+                <div id="mole-6" class="mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer"></div>
+            </div>
+            <div class="game-hole relative bg-amber-900/20 rounded-2xl overflow-hidden flex items-end justify-center border-b-4 border-amber-900/40 shadow-inner cursor-pointer" onclick="hitHole(7)">
+                <div class="absolute inset-x-2 bottom-0 h-4 bg-amber-900/30 rounded-full"></div>
+                <div id="mole-7" class="mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer"></div>
+            </div>
+            <div class="game-hole relative bg-amber-900/20 rounded-2xl overflow-hidden flex items-end justify-center border-b-4 border-amber-900/40 shadow-inner cursor-pointer" onclick="hitHole(8)">
+                <div class="absolute inset-x-2 bottom-0 h-4 bg-amber-900/30 rounded-full"></div>
+                <div id="mole-8" class="mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 하단 교육용 팁 바 -->
+    <footer class="w-full max-w-2xl bg-white/80 backdrop-blur-md rounded-2xl shadow-sm p-3 mt-4 text-center border border-emerald-100 flex items-center justify-center gap-2">
+        <span class="text-xl">💡</span>
+        <p id="tipBox" class="text-xs sm:text-sm text-emerald-800 font-medium">
+            팁: 가공식품을 잡으면 점수가 올라가고, 건강한 채소를 건드리면 생명이 줄어듭니다!
+        </p>
+    </footer>
+
+    <!-- 자바스크립트 게임 엔진 로직 -->
+    <script>
+        // 식품 데이터 정의 (건강한 식품 / 가공식품)
+        const items = [
+            // 가공식품 (타격 대상 - 정답)
+            { name: "콜라", emoji: "🥤", type: "bad", tip: "콜라 등 탄산음료에는 당분이 많아 뼈 건강에 해로워요!" },
+            { name: "햄버거", emoji: "🍔", type: "bad", tip: "햄버거 같은 패스트푸드는 지방과 나트륨이 많아요!" },
+            { name: "감자튀김", emoji: "🍟", type: "bad", tip: "기름에 튀긴 감자튀김은 열량이 높으니 적당히 먹어요!" },
+            { name: "사탕", emoji: "🍬", type: "bad", tip: "사탕과 단거는 충치를 생기게 하니 주의하세요!" },
+            { name: "라면", emoji: "🍜", type: "bad", tip: "인스턴스 라면은 나트륨이 많아 국물은 남기는 게 좋아요!" },
+            // 건강한 식품 (패스 대상 - 오인 타격 주의)
+            { name: "당근", emoji: "🥕", type: "good", tip: "당근에는 눈에 좋은 비타민 A가 풍부해요!" },
+            { name: "브로콜리", emoji: "🥦", type: "good", tip: "브로콜리는 면역력을 높여주는 슈퍼푸드예요!" },
+            { name: "사과", emoji: "🍎", type: "good", tip: "아침 사과는 비타민과 식이섬유가 가득해요!" },
+            { name: "토마토", emoji: "🍅", type: "good", tip: "토마토는 항산화 성분이 많아 몸을 튼튼하게 해요!" },
+            { name: "바나나", emoji: "🍌", type: "good", tip: "바나나는 에너지를 빠르게 채워주는 건강 간식이에요!" }
+        ];
+
+        let score = 0;
+        let lives = 3;
+        let timeLeft = 30;
+        let gameInterval = null;
+        let spawnTimer = null;
+        let isPlaying = false;
+
+        // 구멍별 현재 상태 (null 또는 아이템 객체와 타임아웃 ID)
+        let holeState = Array(9).fill(null);
+
+        // Web Audio API 사운드 효과 생성기
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            try {
+                initAudio();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'hitGood') {
+                    // 가공식품 타격 성공 (맑고 기쁜 팡파레 느낌)
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'hitBad') {
+                    // 채소 오인 타격 페널티 (낮고 거친 경고음)
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'start') {
+                    // 게임 시작음
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.setValueAtTime(500, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                }
+            } catch (e) {
+                console.log("Audio not supported or blocked", e);
+            }
+        }
+
+        // 게임 시작 함수
+        function startGame() {
+            playSound('start');
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            
+            score = 0;
+            lives = 3;
+            timeLeft = 30;
+            isPlaying = true;
+
+            updateHUD();
+
+            // 기존 타이머 클리어
+            clearInterval(gameInterval);
+            clearTimeout(spawnTimer);
+
+            // 구멍 초기화
+            for (let i = 0; i < 9; i++) {
+                hideMole(i);
+            }
+
+            // 남은 시간 카운트다운 타이머
+            gameInterval = setInterval(() => {
+                timeLeft--;
+                updateHUD();
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // 두더지 출현 루프 시작
+            scheduleNextSpawn();
+        }
+
+        // HUD 업데이트
+        function updateHUD() {
+            document.getElementById('scoreDisplay').innerText = score;
+            document.getElementById('timeDisplay').innerText = timeLeft + '초';
+            document.getElementById('livesDisplay').innerText = '❤️'.repeat(Math.max(0, lives));
+        }
+
+        // 무작위 구멍에 식품 출현 스케줄링
+        function scheduleNextSpawn() {
+            if (!isPlaying) return;
+
+            spawnMole();
+
+            // 난이도에 따른 출현 간격 (시간이 지날수록 빨라짐)
+            let nextTime = Math.max(600, 1200 - (30 - timeLeft) * 20);
+            spawnTimer = setTimeout(scheduleNextSpawn, nextTime);
+        }
+
+        // 무작위 구멍 선택 후 식품 띄우기
+        function spawnMole() {
+            // 비어있는 구멍들만 필터링
+            let availableHoles = [];
+            for (let i = 0; i < 9; i++) {
+                if (!holeState[i]) availableHoles.push(i);
+            }
+
+            if (availableHoles.length === 0) return;
+
+            let randomHoleIndex = availableHoles[Math.floor(Math.random() * availableHoles.length)];
+            let randomItem = items[Math.floor(Math.random() * items.length)];
+
+            showMole(randomHoleIndex, randomItem);
+        }
+
+        // 특정 구멍에 아이템 렌더링
+        function showMole(holeIdx, item) {
+            let moleEl = document.getElementById(`mole-${holeIdx}`);
+            moleEl.innerHTML = `
+                <div class="text-4xl sm:text-5xl drop-shadow-md transform transition hover:scale-110">${item.emoji}</div>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-1 shadow-sm ${item.type === 'bad' ? 'bg-rose-500 text-white' : 'bg-emerald-600 text-white'}">
+                    ${item.name}
+                </span>
+            `;
+            moleEl.className = "mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-0 bounce-in cursor-pointer";
+            
+            holeState[holeIdx] = item;
+
+            // 일정 시간(예: 1.5초 ~ 2초) 동안 안 잡으면 자동으로 내려감
+            let hideTimeout = setTimeout(() => {
+                if (holeState[holeIdx] === item) {
+                    hideMole(holeIdx);
+                }
+            }, 1600);
+
+            holeState[holeIdx] = { item, hideTimeout };
+        }
+
+        // 두더지 숨기기
+        function hideMole(holeIdx) {
+            let moleEl = document.getElementById(`mole-${holeIdx}`);
+            moleEl.className = "mole-item absolute bottom-2 w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center transform translate-y-full cursor-pointer";
+            if (holeState[holeIdx] && holeState[holeIdx].hideTimeout) {
+                clearTimeout(holeState[holeIdx].hideTimeout);
+            }
+            holeState[holeIdx] = null;
+        }
+
+        // 플레이어가 구멍을 터치/클릭했을 때
+        function hitHole(holeIdx) {
+            if (!isPlaying) return;
+            let currentData = holeState[holeIdx];
+            if (!currentData || !currentData.item) return; // 비어있는 구멍이면 무시
+
+            let item = currentData.item;
+            let tipBox = document.getElementById('tipBox');
+
+            // 하단 팁 업데이트
+            tipBox.innerText = `${item.emoji} ${item.name}: ${item.tip}`;
+
+            if (item.type === 'bad') {
+                // 가공식품 올바르게 타격! (+점수)
+                playSound('hitGood');
+                score += 10;
+                showFeedback(holeIdx, "+10", "text-emerald-600");
+            } else {
+                // 건강한 채소를 실수로 타격! (-점수 및 생명력 차감)
+                playSound('hitBad');
+                score = Math.max(0, score - 10);
+                lives--;
+                showFeedback(holeIdx, "-10", "text-rose-600");
+
+                if (lives <= 0) {
+                    endGame();
+                    return;
+                }
+            }
+
+            hideMole(holeIdx);
+            updateHUD();
+        }
+
+        // 타격 시 플로팅 텍스트 효과
+        function showFeedback(holeIdx, text, colorClass) {
+            let holeEl = document.getElementById(`mole-${holeIdx}`).parentElement;
+            let feedback = document.createElement('div');
+            feedback.innerText = text;
+            feedback.className = `absolute inset-0 flex items-center justify-center text-2xl font-black ${colorClass} z-10 animate-ping pointer-events-none`;
+            holeEl.appendChild(feedback);
+            setTimeout(() => {
+                feedback.remove();
+            }, 400);
+        }
+
+        // 게임 종료 처리
+        function endGame() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            clearTimeout(spawnTimer);
+
+            for (let i = 0; i < 9; i++) {
+                hideMole(i);
+            }
+
+            let gameOverScreen = document.getElementById('gameOverScreen');
+            let finalScoreEl = document.getElementById('finalScore');
+            let gameOverTitle = document.getElementById('gameOverTitle');
+            let gameOverDesc = document.getElementById('gameOverDesc');
+            let gameOverEmoji = document.getElementById('gameOverEmoji');
+
+            finalScoreEl.innerText = score + "점";
+
+            if (lives <= 0) {
+                gameOverEmoji.innerText = "💥";
+                gameOverTitle.innerText = "생명력이 모두 소모되었어요!";
+                gameOverDesc.innerText = "채소는 살리고 가공식품만 골라 잡아야 해요!";
+            } else if (score >= 150) {
+                gameOverEmoji.innerText = "👑";
+                gameOverTitle.innerText = "최고의 영양 박사님 달성!";
+                gameOverDesc.innerText = "환상적인 식별 실력입니다! 건강한 식습관 마스터!";
+            } else {
+                gameOverEmoji.innerText = "🌟";
+                gameOverTitle.innerText = "게임 클리어!";
+                gameOverDesc.innerText = "꾸준히 연습해서 더 높은 점수에 도전해보세요!";
+            }
+
+            gameOverScreen.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
